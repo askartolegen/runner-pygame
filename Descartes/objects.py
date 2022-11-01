@@ -29,9 +29,9 @@ class Database:
         rows = self.cursor.execute("SELECT name, score FROM runner order by score desc limit 5").fetchall()
         return rows
 
-    def update_data(self, name_, score_):
-        params = (str(score_), name_)
-        self.cursor.execute("UPDATE runner SET score = ? WHERE name = ?", params)
+    def get_exist_name(self):
+        rows = self.cursor.execute("SELECT name FROM runner").fetchall()
+        return rows
 
     def commit(self):
         self.connection.commit()
