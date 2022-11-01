@@ -1,6 +1,6 @@
 import pygame
 from random import choice
-
+import re
 from objects import Player, Database, Obstacle
 
 
@@ -82,10 +82,35 @@ def display_text(data):
         screen.blit(word_surface, (x, y))
 
 
-def reset():
-    global score, player_alive
-    score = 0
-    player_alive = True
+def is_valid(name_):
+    pattern = re.compile(r'^[A-Za-z0-9]*$')
+    return bool(re.match(pattern, name_))
+
+
+def static_elements():
+    global valid
+    valid = True
+    error_message = test_font.render('Satisfied', False, (64, 64, 64))
+    screen.blit(player_stand, player_stand_rect)
+    display_text(db.get_data())
+    input_box.draw(screen)
+    screen.blit(input_message, input_message_rect)
+    name_ = input_box.text
+    if name_:
+        if not is_valid(name_):
+            error_message = test_font.render('Invalid Name', False, (64, 64, 64))
+            valid = False
+        if name_ in exist_players:
+            error_message = test_font.render('This name already exist', False, (64, 64, 64))
+            valid = False
+        if len(name_) > 15:
+            error_message = test_font.render('Too long', False, (64, 64, 64))
+            valid = False
+    else:
+        error_message = test_font.render('Empty value', False, (64, 64, 64))
+        valid = False
+    error_message_rect = error_message.get_rect(center=(630, 370))
+    screen.blit(error_message, error_message_rect)
 
 
 pygame.init()
@@ -95,6 +120,7 @@ clock = pygame.time.Clock()
 test_font = pygame.font.Font('font/Pixeltype.ttf', 50)
 player_alive = False
 start_page = True
+valid = True
 mouse_pos = (-1, -1)
 start_time = 0
 score = 0
@@ -138,7 +164,9 @@ win_message = test_font.render("You WIN", False, 'Gold')
 win_message_rect = win_message.get_rect(center=(400, 200))
 
 input_message = test_font.render("Enter a name:", False, (64, 64, 64))
-input_message_rect = input_message.get_rect(center=(240, 370))
+input_message_rect = input_message.get_rect(center=(200, 370))
+
+exist_players = [x[0] for x in db.get_exist_name()]
 
 # Timer
 obstacle_timer = pygame.USEREVENT + 1
@@ -147,7 +175,7 @@ pygame.time.set_timer(obstacle_timer, 1500)
 # Input text
 COLOR_INACTIVE = pygame.Color('Grey')
 COLOR_ACTIVE = pygame.Color('White')
-input_box = InputBox(350, 350, 100, 32)
+input_box = InputBox(310, 350, 100, 32)
 
 running = True
 while running:
@@ -162,10 +190,10 @@ while running:
 
         else:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
+                if event.key == pygame.K_ESCAPE:
                     running = False
 
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and valid:
                     if start_page:
                         start_page = False
                         player_alive = True
@@ -182,14 +210,11 @@ while running:
     screen.blit(ground_surface, (0, 300))
 
     if start_page:
-        screen.blit(player_stand, player_stand_rect)
         screen.blit(game_name, game_name_rect)
-        display_text(db.get_data())
-        screen.blit(input_message, input_message_rect)
-        input_box.update()
-        input_box.draw(screen)
         screen.blit(game_message1, game_message1_rect)
         screen.blit(game_message2, game_message2_rect)
+        input_box.update()
+        static_elements()
 
     else:
         if player_alive:
@@ -197,7 +222,6 @@ while running:
             player.draw(screen)
             player.draw(screen)
             player.update()
-
             obstacle_group.draw(screen)
             obstacle_group.update()
             name = input_box.get_text()
@@ -207,22 +231,17 @@ while running:
                 screen.blit(win_message, win_message_rect)
 
         else:
-            display_text(db.get_data())
             screen.blit(game_over_img, game_over_img_rect)
             screen.blit(replay_img, replay_img_rect)
-            screen.blit(player_stand, player_stand_rect)
-
             score_message = test_font.render(f'Your score: {score}', False, (64, 64, 64))
             score_message_rect = score_message.get_rect(center=(350, 50))
-
             screen.blit(score_message, score_message_rect)
-            screen.blit(input_message, input_message_rect)
             input_box.update()
-            input_box.draw(screen)
-            if replay_img_rect.collidepoint(mouse_pos):
+            if replay_img_rect.collidepoint(mouse_pos) and valid:
                 start_time = int(pygame.time.get_ticks() / 1000)
                 player_alive = True
-
+            static_elements()
+    exist_players = [x[0] for x in db.get_exist_name()]
     pygame.display.update()
     clock.tick(60)
 
